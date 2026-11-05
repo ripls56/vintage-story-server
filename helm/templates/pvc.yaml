@@ -35,6 +35,27 @@ spec:
   {{- if ne .Values.volumes.storageClassName "" }}
   storageClassName: {{ .Values.volumes.storageClassName }}
   {{- end }}
+{{- if .Values.stratum.enabled }}
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: "{{ .Chart.Name }}-stratum"
+  labels:
+    app: "{{ .Chart.Name }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volumes.stratumPVC.size }}
+  {{- if ne .Values.volumes.storageClassName "" }}
+  storageClassName: {{ .Values.volumes.storageClassName }}
+  {{- end }}
+{{- end }}
 {{- if .Values.volumes.backupPVC.enabled }}
 ---
 kind: PersistentVolumeClaim

@@ -18,10 +18,21 @@ volumes:
     size: 40Gi
   serverPVC:
     size: 10Gi
+  # Only provisioned when stratum.enabled is true.
+  stratumPVC:
+    size: 10Gi
   backupPVC:
     enabled: false
     size: 20Gi
     storageClassName: ""
+
+# Optional Stratum kernel (https://github.com/StratumServer/Stratum).
+# version must be a release tag whose game part equals config.gameVersion,
+# for example "1.22.7-stratum.2" with gameVersion "1.22.7".
+stratum:
+  enabled: false
+  version: ""
+  args: ""
 
 config:
   gameVersion: "1.22.2"

@@ -17,6 +17,28 @@ If you absolutely require to run the process in the container as a gid/uid other
 ### Updating Server
 The image is capable of updating itself, but not automatically. If a new version is released, just update the `GAME_VERSION` variable to match the new version and when the container starts it will update to the new version.
 
+### Optional Stratum Kernel
+[Stratum](https://github.com/StratumServer/Stratum) is a server-side fork of Vintage Story with a rewritten chunk pipeline, entity ticking, physics and autosave. The image can run it instead of the vanilla server by setting two variables:
+
+```bash
+--env=GAME_VERSION='1.22.7'
+--env=STRATUM_ENABLED='true'
+--env=STRATUM_VERSION='1.22.7-stratum.2'
+--mount type=volume,source=vintage-story-stratum,target=/home/vintagestory/stratum
+```
+
+`STRATUM_VERSION` must be a release tag from the [Stratum releases page](https://github.com/StratumServer/Stratum/releases), and the part before `-stratum.` must equal `GAME_VERSION`. The container refuses to start when they disagree, because a Stratum build only fits the exact game version it was compiled against.
+
+The first start with Stratum enabled does more work than usual: it downloads the launcher, then the launcher downloads the matching official server archive, verifies it and lays its patched assemblies on top. That takes a few minutes and needs outbound access to `github.com` and `cdn.vintagestory.at`. The prepared install is kept in `/home/vintagestory/stratum`, so **mount a volume there** - otherwise it is re-downloaded every time the container is re-created. The volume keeps the install across host migrations; nothing in it is host specific.
+
+Notes:
+
+- Do not run the vanilla `VintagestoryServer.dll` against Stratum's patched libraries, and do not copy patched DLLs between directories by hand - the launcher prepares and runs everything itself, which is why it is the server process.
+- The `server` volume is unused while Stratum is enabled. It is kept so switching back does not need any volume changes.
+- Stratum writes `stratum.json` and `stratum-performance.json` into `data/`, next to `serverconfig.json`. Back them up with the rest of `data` and edit them there.
+- To upgrade the kernel, change `STRATUM_VERSION` (and `GAME_VERSION` when the release targets a newer game version). The image reinstalls the launcher and re-prepares the base automatically.
+- To roll back to vanilla, set `STRATUM_ENABLED=false`. The image reinstalls the vanilla server into the `server` volume and starts it; the savegame is the same format and `stratum*.json` files are simply ignored.
+
 ### Restarting the Server
 To restart the server it is safe to stop and start the container. The stop process will gracefully stop the Vintage Story server process and initiate a save before closing.
 
@@ -110,6 +132,10 @@ Game Port is specified in serverconfig.json. Game versions > 1.19 UDP as well as
 | BACKUP_CRON_SCHEDULE | When the backup script should run, expressed in a CRON format: [Example](https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules#sample_schedules) Default is daily at 3 AM server time (typically UTC) | "0 3 * * *" | False    |
 | BACKUP_RETENTION_DAYS | Number of days to keep backups (warning, backups can be quite large)                                             | 7         | False    |
 | BACKUP_RETENTION_MINUTES | Number of minutes to keep backups. Useful for aggressive backup schedules. Only define minutes or days. Supersedes BACKUP_RETENTION_DAYS. | not defined | False |
+| STRATUM_ENABLED      | Run the Stratum server kernel instead of the vanilla server. See [Optional Stratum Kernel](#optional-stratum-kernel) | "false" | False |
+| STRATUM_VERSION      | Stratum release tag to run, for example "1.22.7-stratum.2". Its game part must equal GAME_VERSION | "" | Required when STRATUM_ENABLED=true |
+| STRATUM_ARGS         | Extra arguments appended to the Stratum launcher command line, for example "--stratum-no-banner" | "" | False |
+| STRATUM_TELEMETRY    | When false, the first start seeds `data/stratum.json` with Stratum's anonymous statistics reporting and update checker disabled. Set true to keep the Stratum defaults | "false" | False |
 
 ### serverconfig.json
 If you do not mount a serverconfig.json file into the container, then the container will build one for you.
@@ -283,12 +309,17 @@ services:
       - "42420:42420/udp"
     environment:
       - GAME_VERSION=1.22.2
+      # Optional Stratum kernel
+      # - STRATUM_ENABLED=true
+      # - STRATUM_VERSION=1.22.7-stratum.2
     volumes:
       - vintage-story-data:/home/vintagestory/data
       - vintage-story-server:/home/vintagestory/server
+      - vintage-story-stratum:/home/vintagestory/stratum
 volumes:
   vintage-story-data:
   vintage-story-server:
+  vintage-story-stratum:
 ```
 
 ### Podman

@@ -19,12 +19,21 @@ ENV REGENERATE_CONFIG="false"
 ENV VINTAGE_STORY_PATH="/home/vintagestory"
 ENV DOTNET_PATH="/.dotnet"
 
+# Optional Stratum kernel. When STRATUM_ENABLED=true the container runs the
+# Stratum launcher instead of the vanilla server (see entrypoint.sh).
+ENV STRATUM_ENABLED="false"
+ENV STRATUM_VERSION=""
+ENV STRATUM_PATH="/home/vintagestory/stratum"
+ENV STRATUM_ARGS=""
+ENV STRATUM_TELEMETRY="false"
+
 RUN groupadd -g "$CONTAINER_GID" vintagestory \
     && useradd -g "$CONTAINER_GID" -u "$CONTAINER_UID" -m vintagestory \
     && apt-get update \
     && apt-get install --no-install-recommends -y \
         ca-certificates \
         wget \
+        unzip \
         libicu72 \
         supervisor \
         jq \
@@ -45,6 +54,7 @@ USER vintagestory
 
 RUN mkdir -p "${VINTAGE_STORY_PATH}/server" \
     && mkdir -p "${VINTAGE_STORY_PATH}/data" \
+    && mkdir -p "${STRATUM_PATH}" \
     && echo "${IMAGE_VERSION}" > "${VINTAGE_STORY_PATH}/image_version" \
     && echo "${MAINTAINER}" > "${VINTAGE_STORY_PATH}/image_maintainer" \
     && echo "${CONTAINER_UID}:${CONTAINER_GID}" > "${VINTAGE_STORY_PATH}/expected_filesystem_permissions"

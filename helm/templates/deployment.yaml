@@ -42,6 +42,12 @@ spec:
           value: {{ .Values.config.backupRetentionDays | squote }}
         - name: REGENERATE_CONFIG
           value: {{ .Values.config.regenerateConfig | squote }}
+        - name: STRATUM_ENABLED
+          value: {{ .Values.stratum.enabled | squote }}
+        - name: STRATUM_VERSION
+          value: {{ .Values.stratum.version | squote }}
+        - name: STRATUM_ARGS
+          value: {{ .Values.stratum.args | squote }}
         {{- range $key, $val := .Values.serverConfig }}
         {{- $str := printf "%v" $val }}
         {{- if ne $str "" }}
@@ -61,6 +67,10 @@ spec:
           mountPath: /home/vintagestory/server
         - name: data
           mountPath: /home/vintagestory/data
+{{- if .Values.stratum.enabled }}
+        - name: stratum
+          mountPath: /home/vintagestory/stratum
+{{- end }}
 {{- if .Values.volumes.backupPVC.enabled }}
         - name: backups
           mountPath: /home/vintagestory/data/Backups
@@ -74,6 +84,11 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: "{{ .Chart.Name }}-data"
+{{- if .Values.stratum.enabled }}
+      - name: stratum
+        persistentVolumeClaim:
+          claimName: "{{ .Chart.Name }}-stratum"
+{{- end }}
 {{- if .Values.volumes.backupPVC.enabled }}
       - name: backups
         persistentVolumeClaim:

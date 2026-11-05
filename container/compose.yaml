@@ -7,9 +7,17 @@ services:
       - "42420:42420/udp"
     environment:
       - GAME_VERSION=1.22.0
+      # Optional Stratum kernel. Keep GAME_VERSION equal to the game version
+      # the Stratum release was built for (the part before "-stratum.").
+      # - STRATUM_ENABLED=true
+      # - STRATUM_VERSION=1.22.7-stratum.2
     volumes:
       - vintage-story-data:/home/vintagestory/data
       - vintage-story-server:/home/vintagestory/server
+      # Only needed with STRATUM_ENABLED=true. Holds the launcher and its
+      # prepared base install so it is not downloaded again on every start.
+      - vintage-story-stratum:/home/vintagestory/stratum
 volumes:
   vintage-story-data:
   vintage-story-server:
+  vintage-story-stratum:
