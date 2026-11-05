@@ -1,0 +1,71 @@
+name: Build and Publish to GHCR
+
+# Builds two variants of the same image:
+#   :vanilla / :latest          - plain Vintage Story dedicated server
+#   :stratum / :<game>-stratum  - same image with the Stratum kernel enabled
+# Switching a server between the kernels is then a one line change of the
+# image tag in compose.yaml.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GAME_VERSION: "1.22.7"
+  STRATUM_VERSION: "1.22.7-stratum.2"
+  IMAGE: vintage-story-server
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push vanilla
+        uses: docker/build-push-action@v6
+        with:
+          context: container
+          file: container/Containerfile
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            IMAGE_VERSION=${{ github.sha }}
+            GAME_VERSION=${{ env.GAME_VERSION }}
+            STRATUM_ENABLED=false
+            STRATUM_VERSION=
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE }}:vanilla
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE }}:${{ env.GAME_VERSION }}
+
+      - name: Build and push stratum
+        uses: docker/build-push-action@v6
+        with:
+          context: container
+          file: container/Containerfile
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            IMAGE_VERSION=${{ github.sha }}-stratum
+            GAME_VERSION=${{ env.GAME_VERSION }}
+            STRATUM_ENABLED=true
+            STRATUM_VERSION=${{ env.STRATUM_VERSION }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE }}:stratum
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE }}:${{ env.STRATUM_VERSION }}

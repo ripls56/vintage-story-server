@@ -26,7 +26,7 @@ STRATUM_ENABLED="${STRATUM_ENABLED:-false}"
 STRATUM_VERSION="${STRATUM_VERSION:-}"
 STRATUM_PATH="${STRATUM_PATH:-${VINTAGE_STORY_PATH}/stratum}"
 STRATUM_ARGS="${STRATUM_ARGS:-}"
-STRATUM_TELEMETRY="${STRATUM_TELEMETRY:-false}"
+STRATUM_SEED_CONFIG="${STRATUM_SEED_CONFIG:-true}"
 
 echo "$(timestamp) INFO: Launching Vintage Story dedicatged server image ${IMAGE_VERSION} by ${MAINTAINER}"
 
@@ -113,29 +113,51 @@ prepare_stratum () {
     echo "$(timestamp) INFO: Stratum base install complete ($(cat "${STRATUM_PATH}/.stratum-base" 2>/dev/null || echo unknown))"
 }
 
-# Stratum ships with anonymous usage reporting and an update checker enabled.
-# A server image should not phone home unless the operator asks for it, so the
-# first start seeds a partial config with both switched off. Stratum fills in
-# the remaining fields with defaults and rewrites the file in full, which means
-# an existing config is never overwritten here.
+# Stratum ships with a set of gameplay modules enabled: its own command set
+# (/home, /tpa, /spawn, /kit, ...), chat formatting, client mod policy, packet
+# limits, block break guards, login protection and anonymous usage reporting.
+# Servers that already have their own commands and moderation want none of
+# that, so the first start seeds a partial config that turns the gameplay and
+# telemetry modules off and keeps only the performance work. Stratum fills in
+# the remaining fields with defaults and rewrites the file in full, so an
+# existing config is never overwritten here.
 seed_stratum_config () {
     local config="${VINTAGE_STORY_PATH}/data/stratum.json"
 
     if [ -f "${config}" ]; then
-        echo "$(timestamp) INFO: Found existing Stratum config at ${config}"
+        echo "$(timestamp) INFO: Found existing Stratum config at ${config}, leaving it as is"
         return
     fi
 
-    if [ "${STRATUM_TELEMETRY}" = "true" ]; then
-        echo "$(timestamp) INFO: STRATUM_TELEMETRY is true, leaving Stratum statistics reporting at default"
+    if [ "${STRATUM_SEED_CONFIG}" = "false" ]; then
+        echo "$(timestamp) INFO: STRATUM_SEED_CONFIG is false, using Stratum defaults"
         return
     fi
 
-    echo "$(timestamp) INFO: Seeding ${config} with anonymous stats reporting and update checking disabled"
+    echo "$(timestamp) INFO: Seeding ${config} with Stratum gameplay modules and telemetry disabled"
     cat > "${config}" <<'JSON'
 {
   "ServerStats": { "Enabled": false },
-  "UpdateChecker": { "Enabled": false }
+  "UpdateChecker": { "Enabled": false },
+  "Commands": { "Enabled": false },
+  "Chat": { "Enabled": false },
+  "Appearance": { "Theme": { "Enabled": false }, "RolePrefixes": { "Enabled": false } },
+  "Announcements": { "Enabled": false },
+  "Backup": { "Enabled": false },
+  "PacketLimits": { "Enabled": false },
+  "PacketBackPressure": { "Enabled": false },
+  "Hardening": {
+    "PacketMonitoring": false,
+    "BlockBreakGuards": false,
+    "InventoryGuards": false,
+    "EntityGuards": false
+  },
+  "BlockBreakGuards": { "Enabled": false },
+  "LoginProtection": { "Enabled": false },
+  "ClientModPolicy": { "Enabled": false },
+  "CrowdSpawn": { "Enabled": false },
+  "ItemCleanup": { "Enabled": false },
+  "Restart": { "Enabled": false }
 }
 JSON
 }

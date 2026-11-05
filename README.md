@@ -18,7 +18,29 @@ If you absolutely require to run the process in the container as a gid/uid other
 The image is capable of updating itself, but not automatically. If a new version is released, just update the `GAME_VERSION` variable to match the new version and when the container starts it will update to the new version.
 
 ### Optional Stratum Kernel
-[Stratum](https://github.com/StratumServer/Stratum) is a server-side fork of Vintage Story with a rewritten chunk pipeline, entity ticking, physics and autosave. The image can run it instead of the vanilla server by setting two variables:
+[Stratum](https://github.com/StratumServer/Stratum) is a server-side fork of Vintage Story with a rewritten chunk pipeline, entity ticking, physics and autosave.
+
+This repo publishes two variants of the same image to GHCR, so switching kernels is a one line change in `compose.yaml`:
+
+```yaml
+services:
+  vintage-story:
+    # plain Vintage Story
+    image: ghcr.io/ripls56/vintage-story-server:vanilla
+    # or the Stratum kernel, everything else unchanged
+    # image: ghcr.io/ripls56/vintage-story-server:stratum
+```
+
+The Stratum variant is the same image with `STRATUM_ENABLED=true` and a pinned `STRATUM_VERSION` baked in, so no other compose change is needed. Do not forget the `stratum` volume (see below): without it the kernel is downloaded again on every container re-creation.
+
+The same behaviour is available in any image of this repo by setting the variables by hand:
+
+```bash
+--env=GAME_VERSION='1.22.7'
+--env=STRATUM_ENABLED='true'
+--env=STRATUM_VERSION='1.22.7-stratum.2'
+--mount type=volume,source=vintage-story-stratum,target=/home/vintagestory/stratum
+```
 
 ```bash
 --env=GAME_VERSION='1.22.7'
@@ -135,7 +157,7 @@ Game Port is specified in serverconfig.json. Game versions > 1.19 UDP as well as
 | STRATUM_ENABLED      | Run the Stratum server kernel instead of the vanilla server. See [Optional Stratum Kernel](#optional-stratum-kernel) | "false" | False |
 | STRATUM_VERSION      | Stratum release tag to run, for example "1.22.7-stratum.2". Its game part must equal GAME_VERSION | "" | Required when STRATUM_ENABLED=true |
 | STRATUM_ARGS         | Extra arguments appended to the Stratum launcher command line, for example "--stratum-no-banner" | "" | False |
-| STRATUM_TELEMETRY    | When false, the first start seeds `data/stratum.json` with Stratum's anonymous statistics reporting and update checker disabled. Set true to keep the Stratum defaults | "false" | False |
+| STRATUM_SEED_CONFIG  | When true, the first start seeds `data/stratum.json` with Stratum's gameplay modules (its `/home`, `/tpa`, `/kit`, ... commands, chat, client mod policy, packet limits, block break guards, login protection), usage reporting and update checker disabled, keeping only the performance work. An existing config is never touched. Set false to keep the Stratum defaults | "true" | False |
 
 ### serverconfig.json
 If you do not mount a serverconfig.json file into the container, then the container will build one for you.
